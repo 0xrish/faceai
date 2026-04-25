@@ -178,36 +178,63 @@ async def main() -> None:
                 await snap("step03_searching")
 
                 # Captcha (Prosopo proof-of-work "I am human")
-                try:
-                    if await page.get_by_text("Verify you are a human", exact=True).is_visible(timeout=4000):
-                        context.log.info("Captcha detected — solving")
-                        await snap("step_captcha")
-                        # Click the checkbox to start the PoW challenge
+                captcha_attempts = 0
+                while captcha_attempts < 3:
+                    try:
+                        captcha_visible = await page.get_by_text(
+                            "Verify you are a human", exact=True
+                        ).is_visible(timeout=3000)
+                    except Exception:
+                        captcha_visible = False
+
+                    if not captcha_visible:
+                        break
+
+                    captcha_attempts += 1
+                    context.log.info(f"Captcha detected (attempt {captcha_attempts}) — solving")
+                    await snap(f"step_captcha_{captcha_attempts}")
+
+                    # Click the checkbox to start the PoW challenge
+                    try:
+                        await page.get_by_label("I am human").click(timeout=5000)
+                    except Exception:
                         try:
-                            await page.get_by_label("I am human").click(timeout=5000)
-                        except Exception:
                             await page.locator("label", has_text="I am human").click(timeout=5000)
-                        # Wait for PoW challenge to complete (CPU-bound, can take 5-15s)
-                        await page.wait_for_timeout(10000)
-                        # Wait for Submit to become enabled, then click
-                        submit = page.get_by_role("button", name="Submit")
-                        try:
-                            await submit.wait_for(state="visible", timeout=10000)
-                            await submit.click(timeout=5000)
                         except Exception:
                             pass
-                        # Wait for navigation after captcha
-                        await page.wait_for_timeout(8000)
-                        context.log.info("Captcha submitted")
-                except Exception:
-                    pass
+
+                    # Wait for PoW to finish — poll until Submit is enabled or 20s passes
+                    try:
+                        await page.wait_for_function(
+                            """() => {
+                                const btn = document.querySelector('button[type="submit"]');
+                                return btn && !btn.disabled;
+                            }""",
+                            timeout=20000,
+                        )
+                    except Exception:
+                        await page.wait_for_timeout(15000)
+
+                    # Click Submit
+                    try:
+                        await page.get_by_role("button", name="Submit").click(timeout=5000)
+                        context.log.info("Captcha Submit clicked")
+                    except Exception:
+                        pass
+
+                    # Give navigation time to start
+                    await page.wait_for_timeout(5000)
+
+                    # If we've navigated away from captcha page, stop
+                    if "/results/" in page.url:
+                        break
 
                 # Wait for results page — "All" tab confirms navigation complete
                 try:
                     await page.get_by_role("button", name="All").wait_for(state="visible", timeout=60000)
                     context.log.info("Results page ready")
                 except Exception:
-                    context.log.warning("Results page not detected within 40s")
+                    context.log.warning("Results page not detected within 60s")
                 await snap("step04_results")
 
                 # ── Extract image ID from results URL ────────────────────────
