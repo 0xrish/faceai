@@ -75,13 +75,20 @@ async def main() -> None:
 
         @crawler.pre_navigation_hook
         async def load_cookies(context: PlaywrightCrawlingContext, **kwargs: Any) -> None:
+            import json
             cookie_path = os.path.join(os.path.dirname(__file__), "lenso.ai.cookies.json")
-            if os.path.exists(cookie_path):
-                import json
+            if not os.path.exists(cookie_path):
+                return
+            try:
                 with open(cookie_path, "r") as f:
-                    cookies = json.load(f)
+                    raw = f.read().strip()
+                if not raw:
+                    return
+                cookies = json.loads(raw)
                 await context.page.context.add_cookies(cookies)
-                context.log.info(f"Loaded {len(cookies)} cookies from {cookie_path}")
+                context.log.info(f"Loaded {len(cookies)} cookies")
+            except Exception as e:
+                context.log.warning(f"Cookie load skipped: {e}")
 
         @crawler.router.default_handler
         async def default_handler(context: PlaywrightCrawlingContext) -> None:
