@@ -1,0 +1,32 @@
+{
+    "$schema": "https://apify.com/schemas/v1/dataset.ide.json",
+    "actorSpecification": 1,
+    "fields": {
+        "url": { "type": "string", "description": "Results page URL" },
+        "image_searched": { "type": "string", "description": "URL/path of the uploaded image" },
+        "status": { "type": "string", "description": "success or failed" },
+        "error": { "type": "string", "description": "Error message if status is failed" },
+        "image_count": { "type": "integer", "description": "Number of result images found" },
+        "images": { "type": "array", "description": "All image results from the All tab" },
+        "screenshots": { "type": "object", "description": "Key-value store keys for step screenshots" }
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": ["url", "image_searched", "status", "error", "images", "screenshots"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "url":            { "label": "Results URL",     "format": "link" },
+                    "image_searched": { "label": "Image Searched",  "format": "link" },
+                    "status":         { "label": "Status",          "format": "text" },
+                    "error":          { "label": "Error",           "format": "text" },
+                    "images":         { "label": "Images Found",    "format": "array" },
+                    "screenshots":    { "label": "Screenshots",     "format": "object" }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "$schema": "https://apify.com/schemas/v1/actor.ide.json",
+    "actorSpecification": 1,
+    "name": "face-ai-scraper",
+    "title": "Face AI Scraper",
+    "description": "Upload a photo and search lenso.ai for matching faces. Returns image results across People, Duplicates, and Related tabs with screenshots.",
+    "version": "1.0",
+    "meta": {
+        "templateId": "python-playwright",
+        "generatedBy": "Claude Code with Claude Sonnet 4.6"
+    },
+    "input": "./input_schema.json",
+    "output": "./output_schema.json",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    },
+    "dockerfile": "../Dockerfile"
+}

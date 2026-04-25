@@ -1,0 +1,22 @@
+import re
+from playwright.sync_api import Page, expect
+
+
+def test_example(page: Page) -> None:
+    page.get_by_role("button", name="Allow all").click()
+    page.get_by_text("Drop, paste or upload an image JPG, PNG, WEBP formats, max file size 10MB, min").click()
+    page.get_by_role("textbox", name="or type to search").click()
+    page.get_by_text("upload an image", exact=True).click()
+    page.locator("body").set_input_files("photo.jpeg")
+    page.get_by_role("checkbox", name="I have read and accept").check()
+    page.get_by_role("checkbox", name="I agree to send photos to").check()
+    page.get_by_role("button", name="Perform Search").click()
+    page.locator("div").filter(has_text="Unlock SourcesVishall Prasad").nth(5).click()
+    page.get_by_role("button", name="people").click()
+    page.locator("div").filter(has_text="Unlock SourcesVishall Prasad").nth(5).click()
+    page.get_by_role("button", name="duplicates").click()
+    page.get_by_role("button", name="related").click()
+    page.locator("div").filter(has_text="Unlock SourcesNews and").nth(5).click()
+    page.locator("div").filter(has_text="Unlock SourcesNews and").nth(5).click()
+
+

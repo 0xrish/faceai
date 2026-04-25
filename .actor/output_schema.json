@@ -1,0 +1,12 @@
+{
+    "$schema": "https://apify.com/schemas/v1/output.ide.json",
+    "actorOutputSchemaVersion": 1,
+    "title": "Face AI Extraction Results",
+    "properties": {
+        "results": {
+            "type": "string",
+            "title": "Dataset Results",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        }
+    }
+}
