@@ -10,13 +10,8 @@ USER myuser
 
 COPY --chown=myuser:myuser requirements.txt ./
 
-RUN pip install --no-cache-dir -r requirements.txt
-
-USER root
-RUN python -m playwright install-deps chromium
-
-USER myuser
-RUN python -m playwright install chromium
+RUN pip install --no-cache-dir -r requirements.txt \
+ && python -m playwright install --with-deps chromium
 
 COPY --chown=myuser:myuser . ./
 
