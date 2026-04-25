@@ -107,7 +107,14 @@ async def main() -> None:
                         raise FileNotFoundError(local)
                     shutil.copy2(local, tmp_img)
                 else:
-                    urllib.request.urlretrieve(img_url, tmp_img)
+                    req = urllib.request.Request(img_url)
+                    if "api.apify.com" in img_url:
+                        token = os.environ.get("APIFY_TOKEN", "")
+                        if token:
+                            req.add_header("Authorization", f"Bearer {token}")
+                    with urllib.request.urlopen(req) as resp:
+                        with open(tmp_img, "wb") as out:
+                            out.write(resp.read())
                 context.log.info(f"Image ready at {tmp_img}")
             except Exception as e:
                 context.log.error(f"Image fetch failed: {e}")
