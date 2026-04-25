@@ -70,7 +70,7 @@ async def main() -> None:
             max_requests_per_crawl=10,
             proxy_configuration=proxy_configuration,
             headless=headless,
-            request_handler_timeout=timedelta(seconds=120),
+            request_handler_timeout=timedelta(seconds=180),
         )
 
         @crawler.pre_navigation_hook
@@ -177,25 +177,34 @@ async def main() -> None:
                 await page.wait_for_timeout(2000)
                 await snap("step03_searching")
 
-                # Captcha (Prosopo "I am human")
+                # Captcha (Prosopo proof-of-work "I am human")
                 try:
                     if await page.get_by_text("Verify you are a human", exact=True).is_visible(timeout=4000):
                         context.log.info("Captcha detected — solving")
                         await snap("step_captcha")
+                        # Click the checkbox to start the PoW challenge
                         try:
                             await page.get_by_label("I am human").click(timeout=5000)
                         except Exception:
                             await page.locator("label", has_text="I am human").click(timeout=5000)
-                        await page.wait_for_timeout(1500)
-                        await page.get_by_role("button", name="Submit").click(timeout=5000)
-                        await page.wait_for_timeout(3000)
+                        # Wait for PoW challenge to complete (CPU-bound, can take 5-15s)
+                        await page.wait_for_timeout(10000)
+                        # Wait for Submit to become enabled, then click
+                        submit = page.get_by_role("button", name="Submit")
+                        try:
+                            await submit.wait_for(state="visible", timeout=10000)
+                            await submit.click(timeout=5000)
+                        except Exception:
+                            pass
+                        # Wait for navigation after captcha
+                        await page.wait_for_timeout(8000)
                         context.log.info("Captcha submitted")
                 except Exception:
                     pass
 
                 # Wait for results page — "All" tab confirms navigation complete
                 try:
-                    await page.get_by_role("button", name="All").wait_for(state="visible", timeout=40000)
+                    await page.get_by_role("button", name="All").wait_for(state="visible", timeout=60000)
                     context.log.info("Results page ready")
                 except Exception:
                     context.log.warning("Results page not detected within 40s")
