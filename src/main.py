@@ -177,57 +177,23 @@ async def main() -> None:
                 await page.wait_for_timeout(2000)
                 await snap("step03_searching")
 
-                # Captcha (Prosopo proof-of-work "I am human")
-                captcha_attempts = 0
-                while captcha_attempts < 3:
-                    try:
-                        captcha_visible = await page.get_by_text(
-                            "Verify you are a human", exact=True
-                        ).is_visible(timeout=3000)
-                    except Exception:
-                        captcha_visible = False
+                # Captcha (Prosopo proof-of-work)
+                # Prosopo PoW cannot be automated in headless mode — it requires
+                # valid session cookies from a real browser that already solved it.
+                try:
+                    captcha_visible = await page.get_by_text(
+                        "Verify you are a human", exact=True
+                    ).is_visible(timeout=3000)
+                except Exception:
+                    captcha_visible = False
 
-                    if not captcha_visible:
-                        break
-
-                    captcha_attempts += 1
-                    context.log.info(f"Captcha detected (attempt {captcha_attempts}) — solving")
-                    await snap(f"step_captcha_{captcha_attempts}")
-
-                    # Click the checkbox to start the PoW challenge
-                    try:
-                        await page.get_by_label("I am human").click(timeout=5000)
-                    except Exception:
-                        try:
-                            await page.locator("label", has_text="I am human").click(timeout=5000)
-                        except Exception:
-                            pass
-
-                    # Wait for PoW to finish — poll until Submit is enabled or 20s passes
-                    try:
-                        await page.wait_for_function(
-                            """() => {
-                                const btn = document.querySelector('button[type="submit"]');
-                                return btn && !btn.disabled;
-                            }""",
-                            timeout=20000,
-                        )
-                    except Exception:
-                        await page.wait_for_timeout(15000)
-
-                    # Click Submit
-                    try:
-                        await page.get_by_role("button", name="Submit").click(timeout=5000)
-                        context.log.info("Captcha Submit clicked")
-                    except Exception:
-                        pass
-
-                    # Give navigation time to start
-                    await page.wait_for_timeout(5000)
-
-                    # If we've navigated away from captcha page, stop
-                    if "/results/" in page.url:
-                        break
+                if captcha_visible:
+                    context.log.warning(
+                        "Captcha detected. Add real browser cookies to src/lenso.ai.cookies.json "
+                        "to bypass this. Visit lenso.ai in Chrome, complete a search, then export "
+                        "cookies with the Cookie-Editor extension (Export → JSON)."
+                    )
+                    await snap("step_captcha")
 
                 # Wait for results page — "All" tab confirms navigation complete
                 try:
