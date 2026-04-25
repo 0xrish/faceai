@@ -2,29 +2,30 @@
     "$schema": "https://apify.com/schemas/v1/dataset.ide.json",
     "actorSpecification": 1,
     "fields": {
-        "url": { "type": "string", "description": "Results page URL" },
-        "image_searched": { "type": "string", "description": "URL/path of the uploaded image" },
+        "url": { "type": "string", "description": "Results page URL on lenso.ai" },
+        "image_id": { "type": "string", "description": "Lenso.ai internal image ID" },
+        "image_searched": { "type": "string", "description": "URL or path of the uploaded image" },
         "status": { "type": "string", "description": "success or failed" },
         "error": { "type": "string", "description": "Error message if status is failed" },
-        "image_count": { "type": "integer", "description": "Number of result images found" },
-        "images": { "type": "array", "description": "All image results from the All tab" },
-        "screenshots": { "type": "object", "description": "Key-value store keys for step screenshots" }
+        "result_count": { "type": "integer", "description": "Total number of results across all search types" },
+        "results": { "type": "array", "description": "All results from the lenso.ai API (people, similar, related, duplicates)" }
     },
     "views": {
         "overview": {
             "title": "Overview",
             "transformation": {
-                "fields": ["url", "image_searched", "status", "error", "images", "screenshots"]
+                "fields": ["url", "image_id", "image_searched", "status", "error", "result_count", "results"]
             },
             "display": {
                 "component": "table",
                 "properties": {
                     "url":            { "label": "Results URL",     "format": "link" },
+                    "image_id":       { "label": "Image ID",        "format": "text" },
                     "image_searched": { "label": "Image Searched",  "format": "link" },
                     "status":         { "label": "Status",          "format": "text" },
                     "error":          { "label": "Error",           "format": "text" },
-                    "images":         { "label": "Images Found",    "format": "array" },
-                    "screenshots":    { "label": "Screenshots",     "format": "object" }
+                    "result_count":   { "label": "Total Results",   "format": "number" },
+                    "results":        { "label": "Results",         "format": "array" }
                 }
             }
         }
