@@ -265,12 +265,13 @@ async def main() -> None:
                     except Exception as e:
                         context.log.error(f"Captcha solve failed: {e}")
                         context.log.warning(
-                            "Captcha automation detected as bot. Automated PoW solving is not possible. "
-                            "To bypass: Add real browser cookies to src/lenso.ai.cookies.json. "
-                            "Steps: (1) Visit lenso.ai in Chrome, (2) Complete a search manually, "
-                            "(3) Export cookies with Cookie-Editor extension (Export → JSON), "
-                            "(4) Paste JSON array into lenso.ai.cookies.json"
+                            "Captcha not solved. Add real browser cookies to src/lenso.ai.cookies.json to bypass this. "
+                            "Visit lenso.ai in Chrome, complete a search, then export cookies with the "
+                            "Cookie-Editor extension (Export → JSON)."
                         )
+                        await Actor.push_data({"url": context.request.url, "image_searched": img_url,
+                                               "status": "failed", "error": "Captcha not bypassed"})
+                        return
 
                 # Wait for results page — "All" tab confirms navigation complete
                 try:
