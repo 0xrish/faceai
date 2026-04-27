@@ -1,0 +1,57 @@
+[
+    {
+        "name": "_fbp",
+        "value": "fb.1.1777136793313.227449941813618812",
+        "domain": ".lenso.ai",
+        "path": "/",
+        "expires": 1784924063,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "CookieConsent",
+        "value": "{stamp:%27ACC/vGFM/G/59QoLHvWOtW5+w0vMWlJ8IhdUg1w1p+tylVC5UKG79w==%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:true%2Cmarketing:true%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1777136872721%2Cregion:%27in%27}",
+        "domain": "lenso.ai",
+        "path": "/",
+        "expires": 1808672872,
+        "httpOnly": false,
+        "secure": true
+    },
+    {
+        "name": "_gcl_au",
+        "value": "1.1.784442292.1777136872",
+        "domain": ".lenso.ai",
+        "path": "/",
+        "expires": 1784912872,
+        "httpOnly": false,
+        "secure": false
+    },
+    {
+        "name": "_ga",
+        "value": "GA1.1.310150881.1777136793",
+        "domain": ".lenso.ai",
+        "path": "/",
+        "expires": 1811708062.539538,
+        "httpOnly": false,
+        "secure": false
+    },
+    {
+        "name": "_hjSessionUser_5150968",
+        "value": "eyJpZCI6IjlmMjZjNWE4LWYzMWEtNWE2Yy1hOTY1LWFlYzc4ODhlMzIzMiIsImNyZWF0ZWQiOjE3NzcxMzY3OTM0MDYsImV4aXN0aW5nIjp0cnVlfQ==",
+        "domain": ".lenso.ai",
+        "path": "/",
+        "expires": 1808684063,
+        "httpOnly": false,
+        "secure": true
+    },
+    {
+        "name": "_ga_KF652CYBZT",
+        "value": "GS2.1.s1777148049$o3$g1$t1777148062$j47$l0$h12215424",
+        "domain": ".lenso.ai",
+        "path": "/",
+        "expires": 1811708062.538505,
+        "httpOnly": false,
+        "secure": false
+    }
+]

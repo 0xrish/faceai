@@ -82,11 +82,12 @@ async def main() -> None:
             try:
                 with open(cookie_path, "r") as f:
                     raw = f.read().strip()
-                if not raw:
+                if not raw or raw == "[]":
                     return
                 cookies = json.loads(raw)
-                await context.page.context.add_cookies(cookies)
-                context.log.info(f"Loaded {len(cookies)} cookies")
+                if cookies:
+                    await context.page.context.add_cookies(cookies)
+                    context.log.info(f"Loaded {len(cookies)} cookies")
             except Exception as e:
                 context.log.warning(f"Cookie load skipped: {e}")
 
@@ -133,33 +134,74 @@ async def main() -> None:
             try:
                 await snap("step01_loaded")
 
-                # Cookie consent
+                # Cookie consent — try multiple selectors
+                consent_clicked = False
                 try:
-                    await page.get_by_role("button", name="Allow all").click(timeout=6000)
+                    await page.get_by_role("button", name="Allow all").click(timeout=5000)
+                    consent_clicked = True
+                    context.log.info("Clicked 'Allow all' consent")
                 except Exception:
                     pass
 
-                # Activate upload area
-                try:
-                    await page.get_by_text("Drop, paste or upload an image").first.click(timeout=5000)
-                except Exception:
-                    pass
+                if not consent_clicked:
+                    try:
+                        await page.locator("button:has-text('Allow all')").click(timeout=5000)
+                        consent_clicked = True
+                        context.log.info("Clicked consent via has-text selector")
+                    except Exception:
+                        pass
 
-                # Search textbox
+                if consent_clicked:
+                    await page.wait_for_timeout(500)
+
+                # Click search textbox
                 try:
                     await page.get_by_role("textbox", name="or type to search").click(timeout=5000)
                 except Exception:
                     pass
 
-                # Upload via file chooser
+                # Click the "Drop, paste or upload" text
                 try:
-                    async with page.expect_file_chooser(timeout=6000) as fc_info:
-                        await page.get_by_text("upload an image", exact=True).click(timeout=5000)
-                    await (await fc_info.value).set_files(tmp_img)
-                    context.log.info("Uploaded via file chooser")
+                    await page.get_by_text("Drop, paste or upload an image").click(timeout=5000)
                 except Exception:
-                    await page.locator("input[type='file']").set_input_files(tmp_img)
-                    context.log.info("Uploaded via direct input")
+                    pass
+
+                # Upload via JavaScript file API (simulate drop event)
+                try:
+                    # Read file as base64 and inject via JavaScript
+                    import base64
+                    with open(tmp_img, 'rb') as f:
+                        file_data = base64.b64encode(f.read()).decode()
+
+                    await page.evaluate(f"""
+                        async () => {{
+                            const response = await fetch('data:image/jpeg;base64,{file_data}');
+                            const blob = await response.blob();
+                            const files = [new File([blob], 'photo.jpeg', {{ type: 'image/jpeg' }})];
+
+                            // Dispatch drop event on body
+                            const dt = new DataTransfer();
+                            files.forEach(f => dt.items.add(f));
+
+                            const dropEvent = new DragEvent('drop', {{
+                                bubbles: true,
+                                cancelable: true,
+                                dataTransfer: dt,
+                            }});
+                            document.body.dispatchEvent(dropEvent);
+
+                            // Also try input event on any file inputs
+                            const fileInputs = document.querySelectorAll('input[type="file"]');
+                            for (const input of fileInputs) {{
+                                input.files = dt.files;
+                                input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                            }}
+                        }}
+                    """)
+                    context.log.info("Uploaded via JavaScript drop event")
+                except Exception as e:
+                    context.log.error(f"JavaScript upload failed: {e}")
+                    raise
 
                 await page.wait_for_timeout(1500)
                 await snap("step02_uploaded")
@@ -178,8 +220,6 @@ async def main() -> None:
                 await snap("step03_searching")
 
                 # Captcha (Prosopo proof-of-work)
-                # Prosopo PoW cannot be automated in headless mode — it requires
-                # valid session cookies from a real browser that already solved it.
                 try:
                     captcha_visible = await page.get_by_text(
                         "Verify you are a human", exact=True
@@ -188,12 +228,49 @@ async def main() -> None:
                     captcha_visible = False
 
                 if captcha_visible:
-                    context.log.warning(
-                        "Captcha detected. Add real browser cookies to src/lenso.ai.cookies.json "
-                        "to bypass this. Visit lenso.ai in Chrome, complete a search, then export "
-                        "cookies with the Cookie-Editor extension (Export → JSON)."
-                    )
+                    context.log.info("Captcha detected — attempting PoW solve")
                     await snap("step_captcha")
+
+                    try:
+                        # Find the Prosopo checkbox via data-cy attribute (stable test selector)
+                        checkbox = page.locator("[data-cy='captcha-checkbox']")
+                        context.log.info("Waiting before clicking captcha checkbox...")
+                        await page.wait_for_timeout(2000)  # Wait 2s before clicking
+                        await checkbox.click(timeout=5000)
+                        context.log.info("Clicked captcha checkbox — PoW computation starting")
+
+                        # Wait for Submit button to become enabled (PoW completes)
+                        submit_btn = page.locator("button.verify-btn")
+                        context.log.info("Waiting for PoW computation (up to 60 seconds)...")
+
+                        # Poll for disabled attribute to be removed
+                        for attempt in range(60):  # 60 seconds (120 * 500ms)
+                            disabled = await submit_btn.get_attribute("disabled")
+                            if disabled is None:
+                                context.log.info("PoW completed, Submit enabled")
+                                break
+                            if attempt % 10 == 0:
+                                context.log.info(f"  Still computing... {attempt // 2}s elapsed")
+                            await page.wait_for_timeout(500)
+
+                        # Wait before clicking Submit
+                        context.log.info("Waiting before clicking Submit...")
+                        await page.wait_for_timeout(2000)
+
+                        # Click Submit
+                        await submit_btn.click(timeout=5000)
+                        context.log.info("Clicked Submit")
+                        await page.wait_for_timeout(3000)
+
+                    except Exception as e:
+                        context.log.error(f"Captcha solve failed: {e}")
+                        context.log.warning(
+                            "Captcha automation detected as bot. Automated PoW solving is not possible. "
+                            "To bypass: Add real browser cookies to src/lenso.ai.cookies.json. "
+                            "Steps: (1) Visit lenso.ai in Chrome, (2) Complete a search manually, "
+                            "(3) Export cookies with Cookie-Editor extension (Export → JSON), "
+                            "(4) Paste JSON array into lenso.ai.cookies.json"
+                        )
 
                 # Wait for results page — "All" tab confirms navigation complete
                 try:
