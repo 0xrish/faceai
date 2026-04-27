@@ -65,6 +65,7 @@ async def main() -> None:
         proxy_configuration = None
         if proxy_config:
             proxy_configuration = await Actor.create_proxy_configuration(actor_proxy_input=proxy_config)
+            Actor.log.info("Proxy configuration enabled for all requests")
 
         crawler = PlaywrightCrawler(
             max_requests_per_crawl=10,
@@ -95,6 +96,8 @@ async def main() -> None:
         async def default_handler(context: PlaywrightCrawlingContext) -> None:
             page = context.page
             context.log.info(f"Processing: {context.request.url}")
+            if proxy_configuration:
+                context.log.info(f"[PROXY] All requests (browser + HTTP) routing through configured proxy")
 
             # ── Resolve image ────────────────────────────────────────────────
             img_req = all_images[0]
@@ -113,9 +116,21 @@ async def main() -> None:
                         token = os.environ.get("APIFY_TOKEN", "")
                         if token:
                             req.add_header("Authorization", f"Bearer {token}")
-                    with urllib.request.urlopen(req) as resp:
-                        with open(tmp_img, "wb") as out:
-                            out.write(resp.read())
+
+                    # Use proxy for HTTP requests if configured
+                    if proxy_configuration:
+                        proxy_url = await proxy_configuration.new_url()
+                        proxy_handler = urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url})
+                        opener = urllib.request.build_opener(proxy_handler)
+                        with opener.open(req) as resp:
+                            with open(tmp_img, "wb") as out:
+                                out.write(resp.read())
+                        context.log.info(f"Image downloaded via proxy")
+                    else:
+                        with urllib.request.urlopen(req) as resp:
+                            with open(tmp_img, "wb") as out:
+                                out.write(resp.read())
+
                 context.log.info(f"Image ready at {tmp_img}")
             except Exception as e:
                 context.log.error(f"Image fetch failed: {e}")
@@ -241,10 +256,10 @@ async def main() -> None:
 
                         # Wait for Submit button to become enabled (PoW completes)
                         submit_btn = page.locator("button.verify-btn")
-                        context.log.info("Waiting for PoW computation (up to 60 seconds)...")
+                        context.log.info("Waiting for PoW computation (up to 30 seconds)...")
 
                         # Poll for disabled attribute to be removed
-                        for attempt in range(60):  # 60 seconds (120 * 500ms)
+                        for attempt in range(30):  # 30 seconds (60 * 500ms)
                             disabled = await submit_btn.get_attribute("disabled")
                             if disabled is None:
                                 context.log.info("PoW completed, Submit enabled")
@@ -293,8 +308,10 @@ async def main() -> None:
                     return
 
                 # ── Call lenso.ai search API for each result type ────────────
-                # Using page.evaluate so the browser session cookies are sent automatically.
+                # Using page.evaluate so the browser session cookies & proxy are sent automatically.
                 all_results: List[Dict[str, Any]] = []
+                if proxy_configuration:
+                    context.log.info(f"[PROXY] API fetch calls via browser context using proxy")
 
                 for result_type in SEARCH_TYPES:
                     try:
